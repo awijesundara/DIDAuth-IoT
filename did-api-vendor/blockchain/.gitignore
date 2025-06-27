@@ -1,0 +1,90 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environment
+.venv/
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Distribution / packaging
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.cache
+.pytest_cache/
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+
+# FastAPI / Uvicorn
+*.log
+*.pid
+
+# VSCode / PyCharm
+.vscode/
+.idea/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Environment variables
+.env
+.env.*
+
+# Docker
+*.pid
+*.seed
+*.pid.lock
+Dockerfile
+docker-compose.yml
+*.tar
+data/
+
+# Node.js (for Hardhat)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+.env.local
+.env.production
+.env.development
+.truffle/
+
+# Hardhat
+artifacts/
+cache/
+typechain/
+coverage/
+contracts/abis/
+*.tsbuildinfo
+
+# Deployment scripts
+*.secret

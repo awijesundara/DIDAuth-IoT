@@ -1,0 +1,18 @@
+[Unit]
+Description=DID API Vendor
+After=network.target
+
+[Service]
+Type=simple
+User={{USER}}
+WorkingDirectory={{WORKING_DIR}}
+Environment=PATH={{WORKING_DIR}}/venv/bin:/usr/bin:/bin
+Environment=PYTHONUNBUFFERED=1
+ExecStart={{WORKING_DIR}}/run.sh
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

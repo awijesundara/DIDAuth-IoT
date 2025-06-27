@@ -1,0 +1,93 @@
+[
+  {
+    "anonymous": false,
+    "inputs": [
+      { "indexed": false, "internalType": "string", "name": "did", "type": "string" },
+      { "indexed": false, "internalType": "address", "name": "controller", "type": "address" },
+      { "indexed": false, "internalType": "string", "name": "ipfsCid", "type": "string" }
+    ],
+    "name": "DIDRegistered",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      { "indexed": false, "internalType": "string", "name": "vcId", "type": "string" }
+    ],
+    "name": "VCRevoked",
+    "type": "event"
+  },
+  {
+    "inputs": [
+      { "internalType": "string", "name": "did", "type": "string" }
+    ],
+    "name": "getDIDCID",
+    "outputs": [
+      { "internalType": "string", "name": "", "type": "string" }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      { "internalType": "string", "name": "did", "type": "string" }
+    ],
+    "name": "getDIDController",
+    "outputs": [
+      { "internalType": "address", "name": "", "type": "address" }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      { "internalType": "string", "name": "vcId", "type": "string" }
+    ],
+    "name": "isVCRevoked",
+    "outputs": [
+      { "internalType": "bool", "name": "", "type": "bool" }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      { "internalType": "string", "name": "vcId", "type": "string" }
+    ],
+    "name": "getVCIssuer",
+    "outputs": [
+      { "internalType": "string", "name": "", "type": "string" }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      { "internalType": "string", "name": "did", "type": "string" },
+      { "internalType": "string", "name": "ipfsCid", "type": "string" }
+    ],
+    "name": "registerDID",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      { "internalType": "string", "name": "vcId", "type": "string" },
+      { "internalType": "string", "name": "did", "type": "string" }
+    ],
+    "name": "recordVC",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      { "internalType": "string", "name": "vcId", "type": "string" }
+    ],
+    "name": "revokeVC",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  }
+]
