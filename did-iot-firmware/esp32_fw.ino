@@ -15,8 +15,8 @@
 const char* apSSID = "ESP32-VC-Uploader";
 const char* apPassword = "12345678";
 
-const char* staSSID = "?????????";
-const char* staPassword = "????????";
+const char* staSSID = "<<HOME WIFI SSID>>";
+const char* staPassword = "<<HOME WIFI PASSWORD>>";
 
 const char* verificationURL = "http://192.168.68.61:8000/vp/verify";
 const char* firmwareFile = "/firmware.bin";
