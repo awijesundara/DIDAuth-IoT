@@ -1,0 +1,9 @@
+fastapi
+uvicorn[standard]
+cryptography
+pydantic
+httpx
+python-dotenv
+requests
+web3
+pqcrypto
