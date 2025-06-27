@@ -12,5 +12,4 @@ DIDAuth-IoT explores decentralized firmware verification for IoT devices. The pr
 Each directory contains a README with setup details and example commands.
 
 ## License
-MIT License
 © 2025 Anushka Wijesundara - Institute of Science Tokyo, Japan
