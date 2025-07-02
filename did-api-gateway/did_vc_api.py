@@ -218,7 +218,7 @@ def create_vc(req: VCCreateRequest, x_api_key: str = Header(...)):
     firmware_hash = hashlib.sha256(firmware_bytes).hexdigest()
 
     vc = {
-        "@context": ["https://www.w3.org/2018/credentials/v1"],
+        "@context": ["https://www.w3.org/ns/credentials/v2"],
         "type": ["VerifiableCredential", "FirmwareCredential"],
         "id": f"vc:{did_name}:{firmware_version}",
         "issuer": f"did:local:{did_name}",
@@ -274,7 +274,7 @@ def create_vp(req: VPCreateRequest, x_api_key: str = Header(...)):
         vc = json.load(f)
 
     vp = {
-        "@context": ["https://www.w3.org/2018/credentials/v1"],
+        "@context": ["https://www.w3.org/ns/credentials/v2"],
         "type": ["VerifiablePresentation"],
         "verifiableCredential": [vc],
         "holder": f"did:local:{did_name}"

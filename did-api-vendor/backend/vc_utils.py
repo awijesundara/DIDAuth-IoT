@@ -125,7 +125,7 @@ def issue_vc(did_name: str, firmware_version: str, device_model: str, firmware_b
     private_key, pubkey_pem = load_or_create_keys(did_name)
 
     vc = {
-        "@context": ["https://www.w3.org/2018/credentials/v1"],
+        "@context": ["https://www.w3.org/ns/credentials/v2"],
         "type": ["VerifiableCredential", "FirmwareCredential"],
         "id": f"vc:{did_name}:{firmware_version}",
         "issuer": f"did:local:{did_name}",
