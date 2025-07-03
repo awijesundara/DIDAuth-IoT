@@ -8,7 +8,7 @@
 #include "mbedtls/sha256.h"
 #define VERIFY_SIGNATURE 0
 #if VERIFY_SIGNATURE
-#include "dilithium.h" // lightweight Dilithium implementation
+#include "dilithium.h"
 #endif
 
 const char* apSSID = "ESP32-VC-Uploader";
@@ -133,7 +133,7 @@ bool verifySignature(const JsonDocument& doc) {
   String canonical;
   canonicalize(tmp.as<JsonVariant>(), canonical);
 
-  uint8_t sig[3300]; // size sufficient for Dilithium2
+  uint8_t sig[3300];
   size_t sigLen = decodeBase64Url(sigB64, sig);
   uint8_t pub[1312];
   size_t pubLen = decodeBase64(pkB64, strlen(pkB64), pub);

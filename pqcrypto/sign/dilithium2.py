@@ -1,8 +1,6 @@
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey, Ed25519PublicKey
 from cryptography.hazmat.primitives import serialization
 
-# Simple stub implementation using Ed25519 for tests
-
 def generate_keypair():
     priv = Ed25519PrivateKey.generate()
     pub = priv.public_key()
