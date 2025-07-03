@@ -19,17 +19,14 @@ class DummyRequest:
 def _setup_did(tmp_path):
     did_dir = Path(did_vc_api.DID_DIR_TEMPLATE.format(name="test"))
     did_dir.mkdir(parents=True, exist_ok=True)
-    did_doc = {"verificationMethod": [{"publicKeyPem": "pem"}]}
+    did_doc = {"verificationMethod": [{"publicKeyBase64": "aGk="}]}
     with open(did_dir / "did.json", "w") as f:
         json.dump(did_doc, f)
 
-class StubKey:
-    def verify(self, *args, **kwargs):
-        return None
 
 def test_verify_vp_bad_firmware_hash(tmp_path, monkeypatch):
     _setup_did(tmp_path)
-    monkeypatch.setattr(did_vc_api.serialization, "load_pem_public_key", lambda *_: StubKey())
+    monkeypatch.setattr(did_vc_api.dilithium2, "verify", lambda *args, **kwargs: None)
     monkeypatch.setattr(did_vc_api, "contract", None)
 
     fw_data = b"realfirmware"
@@ -52,7 +49,7 @@ def test_verify_vp_bad_firmware_hash(tmp_path, monkeypatch):
         "issuer": "did:local:test",
         "firmwareCid": "cid",
         "credentialSubject": {"firmwareHash": "bad"},
-        "proof": {"jws": base64.urlsafe_b64encode(b"sig").decode(), "verificationMethod": {"publicKeyPem": "pem"}},
+        "proof": {"jws": base64.urlsafe_b64encode(b"sig").decode(), "verificationMethod": {"publicKeyBase64": "aGk="}},
     }
     vp = {"verifiableCredential": [vc]}
     req = DummyRequest(vp)

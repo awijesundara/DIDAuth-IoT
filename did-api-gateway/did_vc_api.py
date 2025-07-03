@@ -3,8 +3,8 @@ from fastapi.responses import JSONResponse
 import binascii, logging
 from logging.handlers import RotatingFileHandler
 from pydantic import BaseModel
-from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
-from cryptography.hazmat.primitives import serialization, padding as sym_padding
+from pqcrypto.sign import dilithium2
+from cryptography.hazmat.primitives import padding as sym_padding
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.fernet import Fernet, InvalidToken
 from cryptography.exceptions import InvalidSignature
@@ -165,28 +165,20 @@ def create_did(req: DIDRequest):
         raise HTTPException(status_code=400, detail="DID already exists")
     os.makedirs(did_path, exist_ok=True)
 
-    private_key = Ed25519PrivateKey.generate()
-    public_key = private_key.public_key()
+    public_key, private_key = dilithium2.generate_keypair()
 
-    with open(f"{did_path}/private_key.pem", "wb") as f:
-        f.write(private_key.private_bytes(
-            serialization.Encoding.PEM,
-            serialization.PrivateFormat.PKCS8,
-            serialization.NoEncryption()
-        ))
-    with open(f"{did_path}/public_key.pem", "wb") as f:
-        f.write(public_key.public_bytes(
-            serialization.Encoding.PEM,
-            serialization.PublicFormat.SubjectPublicKeyInfo
-        ))
+    with open(f"{did_path}/private_key.bin", "wb") as f:
+        f.write(private_key)
+    with open(f"{did_path}/public_key.bin", "wb") as f:
+        f.write(public_key)
 
     did_doc = {
         "id": f"did:local:{name}",
         "verificationMethod": [{
             "id": f"did:local:{name}#key-1",
-            "type": "Ed25519VerificationKey2020",
+            "type": "DilithiumVerificationKey2020",
             "controller": f"did:local:{name}",
-            "publicKeyPem": open(f"{did_path}/public_key.pem").read()
+            "publicKeyBase64": base64.b64encode(public_key).decode()
         }]
     }
     with open(f"{did_path}/did.json", "w") as f:
@@ -208,8 +200,8 @@ def create_vc(req: VCCreateRequest, x_api_key: str = Header(...)):
     verify_api_key(did_name, x_api_key)
 
     did_path = DID_DIR_TEMPLATE.format(name=did_name)
-    with open(f"{did_path}/private_key.pem", "rb") as f:
-        private_key = serialization.load_pem_private_key(f.read(), password=None)
+    with open(f"{did_path}/private_key.bin", "rb") as f:
+        private_key = f.read()
 
     try:
         firmware_bytes = base64.b64decode(req.firmware_content)
@@ -231,9 +223,9 @@ def create_vc(req: VCCreateRequest, x_api_key: str = Header(...)):
     }
 
     message = json.dumps(vc, separators=(",", ":"), sort_keys=True).encode()
-    signature = private_key.sign(message)
+    signature = dilithium2.sign(message, private_key)
     vc["proof"] = {
-        "type": "Ed25519Signature2020",
+        "type": "DilithiumSignature2020",
         "verificationMethod": f"did:local:{did_name}#key-1",
         "jws": base64.urlsafe_b64encode(signature).decode()
     }
@@ -282,18 +274,18 @@ def create_vp(req: VPCreateRequest, x_api_key: str = Header(...)):
 
     if os.getenv("SIGN_VP"):
         did_path = DID_DIR_TEMPLATE.format(name=did_name)
-        with open(f"{did_path}/private_key.pem", "rb") as f:
-            private_key = serialization.load_pem_private_key(f.read(), password=None)
-        pub_pem = open(f"{did_path}/public_key.pem").read()
+        with open(f"{did_path}/private_key.bin", "rb") as f:
+            private_key = f.read()
+        pub_key = open(f"{did_path}/public_key.bin", "rb").read()
         message = json.dumps(vp, separators=(",", ":"), sort_keys=True).encode()
-        signature = private_key.sign(message)
+        signature = dilithium2.sign(message, private_key)
         vp["proof"] = {
-            "type": "Ed25519Signature2020",
+            "type": "DilithiumSignature2020",
             "verificationMethod": {
                 "id": f"did:local:{did_name}#key-1",
-                "type": "Ed25519VerificationKey2020",
+                "type": "DilithiumVerificationKey2020",
                 "controller": f"did:local:{did_name}",
-                "publicKeyPem": pub_pem,
+                "publicKeyBase64": base64.b64encode(pub_key).decode(),
             },
             "jws": base64.urlsafe_b64encode(signature).decode(),
         }
@@ -342,14 +334,14 @@ async def verify_vp(request: Request):
             with open(did_path) as f:
                 did_doc = json.load(f)
 
-        pubkey_pem = did_doc["verificationMethod"][0]["publicKeyPem"]
-        public_key = serialization.load_pem_public_key(pubkey_pem.encode())
+        pubkey_b64 = did_doc["verificationMethod"][0]["publicKeyBase64"]
+        public_key = base64.b64decode(pubkey_b64)
         message = json.dumps(vp_copy, separators=(",", ":"), sort_keys=True).encode()
         try:
             signature = base64.urlsafe_b64decode(vp_proof["jws"] + "==")
-            public_key.verify(signature, message)
+            dilithium2.verify(message, signature, public_key)
             vp_sig_valid = True
-        except InvalidSignature:
+        except Exception:
             vp_sig_valid = False
 
     if "verifiableCredential" not in vp or not isinstance(vp["verifiableCredential"], list) or not vp["verifiableCredential"]:
@@ -388,16 +380,16 @@ async def verify_vp(request: Request):
         with open(did_path) as f:
             did_doc = json.load(f)
 
-    pubkey_pem = did_doc["verificationMethod"][0]["publicKeyPem"]
-    public_key = serialization.load_pem_public_key(pubkey_pem.encode())
+    pubkey_b64 = did_doc["verificationMethod"][0]["publicKeyBase64"]
+    public_key = base64.b64decode(pubkey_b64)
 
     message = json.dumps(vc, separators=(",", ":"), sort_keys=True).encode()
     signature = base64.urlsafe_b64decode(proof["jws"] + "==")
 
     try:
-        public_key.verify(signature, message)
+        dilithium2.verify(message, signature, public_key)
         valid = True
-    except InvalidSignature:
+    except Exception:
         valid = False
 
     chain_issuer = None
@@ -493,8 +485,8 @@ def verify_vc(req: VCVerifyRequest):
                 raise HTTPException(status_code=500, detail=f"DID fetch failed: {str(e)}")
 
     try:
-        pubkey_pem = did_doc["verificationMethod"][0]["publicKeyPem"]
-        public_key = serialization.load_pem_public_key(pubkey_pem.encode())
+        pubkey_b64 = did_doc["verificationMethod"][0]["publicKeyBase64"]
+        public_key = base64.b64decode(pubkey_b64)
     except Exception:
         raise HTTPException(status_code=500, detail="Invalid public key in DID document")
 
@@ -505,7 +497,7 @@ def verify_vc(req: VCVerifyRequest):
     message = json.dumps(vc, separators=(',', ':'), sort_keys=True).encode()
     try:
         signature = base64.urlsafe_b64decode(proof["jws"] + "==")
-        public_key.verify(signature, message)
+        dilithium2.verify(message, signature, public_key)
         valid = True
     except Exception:
         valid = False

@@ -1,7 +1,6 @@
 import os, json, base64, hashlib, re, binascii
 from datetime import datetime
-from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
-from cryptography.hazmat.primitives import serialization
+from pqcrypto.sign import dilithium2
 from cryptography.exceptions import InvalidSignature
 import requests
 from dotenv import load_dotenv
@@ -35,32 +34,24 @@ def load_or_create_keys(did_name: str):
     did_name = sanitize_name(did_name)
     key_dir = KEY_DIR_TEMPLATE.format(did_name=did_name)
     os.makedirs(key_dir, exist_ok=True)
-    priv_path = os.path.join(key_dir, "private_key.pem")
-    pub_path = os.path.join(key_dir, "public_key.pem")
+    priv_path = os.path.join(key_dir, "private_key.bin")
+    pub_path = os.path.join(key_dir, "public_key.bin")
 
     if not os.path.exists(priv_path):
-        private_key = Ed25519PrivateKey.generate()
-        public_key = private_key.public_key()
+        public_key, private_key = dilithium2.generate_keypair()
 
         with open(priv_path, "wb") as f:
-            f.write(private_key.private_bytes(
-                serialization.Encoding.PEM,
-                serialization.PrivateFormat.PKCS8,
-                serialization.NoEncryption()
-            ))
+            f.write(private_key)
         with open(pub_path, "wb") as f:
-            f.write(public_key.public_bytes(
-                serialization.Encoding.PEM,
-                serialization.PublicFormat.SubjectPublicKeyInfo
-            ))
+            f.write(public_key)
     else:
         with open(priv_path, "rb") as f:
-            private_key = serialization.load_pem_private_key(f.read(), password=None)
+            private_key = f.read()
 
-    with open(pub_path, "r") as f:
-        pubkey_pem = f.read()
+    with open(pub_path, "rb") as f:
+        pubkey = f.read()
 
-    return private_key, pubkey_pem
+    return private_key, pubkey
 
 def save_api_key(did_name: str):
     did_name = sanitize_name(did_name)
@@ -122,7 +113,7 @@ def issue_vc(did_name: str, firmware_version: str, device_model: str, firmware_b
     except RuntimeError as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-    private_key, pubkey_pem = load_or_create_keys(did_name)
+    private_key, pubkey = load_or_create_keys(did_name)
 
     vc = {
         "@context": ["https://www.w3.org/ns/credentials/v2"],
@@ -140,15 +131,15 @@ def issue_vc(did_name: str, firmware_version: str, device_model: str, firmware_b
     }
 
     message = json.dumps(vc, separators=(",", ":"), sort_keys=True).encode()
-    signature = private_key.sign(message)
+    signature = dilithium2.sign(message, private_key)
 
     vc["proof"] = {
-        "type": "Ed25519Signature2020",
+        "type": "DilithiumSignature2020",
         "verificationMethod": {
             "id": f"did:local:{did_name}#key-1",
-            "type": "Ed25519VerificationKey2020",
+            "type": "DilithiumVerificationKey2020",
             "controller": f"did:local:{did_name}",
-            "publicKeyPem": pubkey_pem
+            "publicKeyBase64": base64.b64encode(pubkey).decode()
         },
         "jws": base64.urlsafe_b64encode(signature).decode()
     }
@@ -194,11 +185,11 @@ def verify_vc(vc: dict, contract):
     message = json.dumps(vc_data, separators=(",", ":"), sort_keys=True).encode()
     signature = base64.urlsafe_b64decode(proof["jws"] + "==")
 
-    pubkey_pem = proof["verificationMethod"]["publicKeyPem"]
-    public_key = serialization.load_pem_public_key(pubkey_pem.encode())
+    pubkey_b64 = proof["verificationMethod"]["publicKeyBase64"]
+    public_key = base64.b64decode(pubkey_b64)
 
     try:
-        public_key.verify(signature, message)
+        dilithium2.verify(message, signature, public_key)
         is_revoked = contract.functions.isVCRevoked(vc_id).call()
         return {
             "valid": not is_revoked,
@@ -206,7 +197,7 @@ def verify_vc(vc: dict, contract):
             "revoked": is_revoked,
             "status": "✅ Signature valid" if not is_revoked else "❌ Revoked"
         }
-    except InvalidSignature:
+    except Exception:
         return {
             "valid": False,
             "issuer": issuer,

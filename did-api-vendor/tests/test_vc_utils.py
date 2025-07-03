@@ -22,7 +22,7 @@ def test_verify_vc_missing_contract_address():
     vc = {
         "id": "vc:test:1",
         "issuer": "did:local:test",
-        "proof": {"jws": "sig", "verificationMethod": {"publicKeyPem": "pem"}},
+        "proof": {"jws": "sig", "verificationMethod": {"publicKeyBase64": "aGk="}} ,
     }
     result = vc_utils.verify_vc(vc, DummyContract())
     assert result == {"valid": False, "error": "contractAddress missing"}
@@ -73,7 +73,7 @@ def test_issue_vc_uploads_firmware_and_embeds_cid(monkeypatch):
             return b"sig"
 
     monkeypatch.setattr(vc_utils, "requests", MagicMock(post=mock_post))
-    monkeypatch.setattr(vc_utils, "load_or_create_keys", lambda _: (DummyKey(), "pub"))
+    monkeypatch.setattr(vc_utils, "load_or_create_keys", lambda _: (DummyKey(), b"pub"))
 
     res = vc_utils.issue_vc("test", "1.0", "ESP32", base64.b64encode(b"bin").decode())
 

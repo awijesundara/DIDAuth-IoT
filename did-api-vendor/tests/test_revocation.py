@@ -1,6 +1,6 @@
 import importlib.util
 from pathlib import Path
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
 spec = importlib.util.spec_from_file_location(
     "vc_utils", Path(__file__).resolve().parents[1] / "backend" / "vc_utils.py"
@@ -33,10 +33,6 @@ class DummyContractRevoked:
             return Func()
 
 
-def _stub_key():
-    mock_key = MagicMock()
-    mock_key.verify.return_value = None
-    return mock_key
 
 
 VC_TEMPLATE = {
@@ -45,14 +41,14 @@ VC_TEMPLATE = {
     "contractAddress": DummyContractNotRevoked.address,
     "proof": {
         "jws": "AAA",
-        "verificationMethod": {"publicKeyPem": "-----BEGIN PUBLIC KEY-----\nAA\n-----END PUBLIC KEY-----"},
+        "verificationMethod": {"publicKeyBase64": "aGk="},
     },
 }
 
 
 def test_verify_vc_not_revoked():
     vc = VC_TEMPLATE.copy()
-    with patch("vc_utils.serialization.load_pem_public_key", return_value=_stub_key()):
+    with patch("vc_utils.dilithium2.verify", return_value=None):
         result = vc_utils.verify_vc(vc, DummyContractNotRevoked())
     assert result == {
         "valid": True,
@@ -64,7 +60,7 @@ def test_verify_vc_not_revoked():
 
 def test_verify_vc_revoked():
     vc = VC_TEMPLATE.copy()
-    with patch("vc_utils.serialization.load_pem_public_key", return_value=_stub_key()):
+    with patch("vc_utils.dilithium2.verify", return_value=None):
         result = vc_utils.verify_vc(vc, DummyContractRevoked())
     assert result == {
         "valid": False,

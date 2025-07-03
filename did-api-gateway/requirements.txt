@@ -6,3 +6,4 @@ httpx
 python-dotenv
 requests
 web3
+pqcrypto

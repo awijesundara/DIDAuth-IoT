@@ -56,3 +56,4 @@ varint==1.0.2
 web3==7.10.0
 websockets==15.0.1
 yarl==1.18.3
+pqcrypto
