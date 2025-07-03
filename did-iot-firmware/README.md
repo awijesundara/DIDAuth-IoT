@@ -1,6 +1,6 @@
 # DID IoT Firmware
 
-This directory contains an example ESP32 sketch that uploads a verifiable credential and asks a gateway to verify it.
+This directory contains an example ESP32 sketch that uploads a verifiable credential and asks a gateway to verify it using Dilithium signatures.
 
 ## Usage
 

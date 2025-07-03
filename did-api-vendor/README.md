@@ -8,6 +8,7 @@ This backend issues and manages verifiable credentials using a DID registry smar
 - Node.js with npm
 - Access to an Arbitrum Sepolia RPC endpoint
 - IPFS daemon or hosted gateway
+- The `pqcrypto` Python package
 
 ## Setup
 
@@ -73,4 +74,4 @@ curl -X POST http://localhost:8000/vc/verify \
 
 The `/vp/create` endpoint builds a presentation from a stored credential but
 does not sign it. Set the `SIGN_VP` environment variable if you want the server
-to attach an Ed25519 signature.
+to attach a Dilithium signature.

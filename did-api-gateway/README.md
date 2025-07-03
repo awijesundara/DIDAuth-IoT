@@ -13,6 +13,7 @@ checks.
 
 - Python 3.10 or later
 - An `AES_KEY` used for signing and verifying data
+- The `pqcrypto` Python package
 - `ARB_SEPOLIA_RPC`/`ARBITRUM_RPC_URL` and `CONTRACT_ADDRESS` so the gateway can
   query the DID registry
 - Optional `IPFS_API_URL` to override the default `https://ipfs.io` endpoint
@@ -81,7 +82,7 @@ curl -X POST http://localhost:8000/vp/verify \
 
 `/vp/create` generates an unsigned presentation that simply bundles the
 credential. Set the `SIGN_VP` environment variable to sign the presentation with
-the holder's Ed25519 key. Alternatively you can sign the JSON yourself and
+the holder's Dilithium key. Alternatively you can sign the JSON yourself and
 include the signature in a `proof` field.
 
 The gateway can also verify individual credentials via `/vc/verify`.

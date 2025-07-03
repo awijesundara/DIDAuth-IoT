@@ -10,7 +10,7 @@ from vc_utils import (
     save_api_key, verify_api_key, ipfs_download,
     sanitize_name, VC_DIR_TEMPLATE
 )
-from cryptography.hazmat.primitives import serialization
+from pqcrypto.sign import dilithium2
 from cryptography.exceptions import InvalidSignature
 
 load_dotenv()
@@ -94,7 +94,7 @@ class VPCreateRequest(BaseModel):
 @app.post("/did/register")
 def register_did(req: DIDRequest):
     did = f"did:local:{req.name}"
-    private_key, pubkey_pem = load_or_create_keys(req.name)
+    private_key, pubkey = load_or_create_keys(req.name)
     api_key = save_api_key(req.name)
 
                          
@@ -103,9 +103,9 @@ def register_did(req: DIDRequest):
         "id": did,
         "verificationMethod": [{
             "id": f"{did}#key-1",
-            "type": "Ed25519VerificationKey2020",
+            "type": "DilithiumVerificationKey2020",
             "controller": did,
-            "publicKeyPem": pubkey_pem
+            "publicKeyBase64": base64.b64encode(pubkey).decode()
         }],
         "authentication": [f"{did}#key-1"]
     }
@@ -211,16 +211,16 @@ def vp_create(req: VPCreateRequest, x_api_key: str = Header(...)):
     }
 
     if os.getenv("SIGN_VP"):
-        private_key, pubkey_pem = load_or_create_keys(did_name)
+        private_key, pubkey = load_or_create_keys(did_name)
         message = json.dumps(vp, separators=(",", ":"), sort_keys=True).encode()
-        signature = private_key.sign(message)
+        signature = dilithium2.sign(message, private_key)
         vp["proof"] = {
-            "type": "Ed25519Signature2020",
+            "type": "DilithiumSignature2020",
             "verificationMethod": {
                 "id": f"did:local:{did_name}#key-1",
-                "type": "Ed25519VerificationKey2020",
+                "type": "DilithiumVerificationKey2020",
                 "controller": f"did:local:{did_name}",
-                "publicKeyPem": pubkey_pem,
+                "publicKeyBase64": base64.b64encode(pubkey).decode(),
             },
             "jws": base64.urlsafe_b64encode(signature).decode(),
         }
@@ -257,14 +257,14 @@ async def vp_verify(request: Request):
     vp_valid = None
     if proof:
         holder = vp_copy.get("holder", "").split(":")[-1]
-        _, pubkey_pem = load_or_create_keys(holder)
-        public_key = serialization.load_pem_public_key(pubkey_pem.encode())
+        _, pubkey = load_or_create_keys(holder)
+        public_key = pubkey
         message = json.dumps(vp_copy, separators=(",", ":"), sort_keys=True).encode()
         try:
             signature = base64.urlsafe_b64decode(proof["jws"] + "==")
-            public_key.verify(signature, message)
+            dilithium2.verify(message, signature, public_key)
             vp_valid = True
-        except InvalidSignature:
+        except Exception:
             vp_valid = False
 
     result = verify_vc(vc, contract)

@@ -8,8 +8,7 @@
 #include "mbedtls/sha256.h"
 #define VERIFY_SIGNATURE 0
 #if VERIFY_SIGNATURE
-#include <openssl/evp.h>
-#include <openssl/pem.h>
+#include "dilithium.h" // lightweight Dilithium implementation
 #endif
 
 const char* apSSID = "ESP32-VC-Uploader";
@@ -53,7 +52,6 @@ bool verifyFirmwareFile(const char* path, const char* expected) {
 }
 
 #if VERIFY_SIGNATURE
-const char* issuerPubKeyPem = "-----BEGIN PUBLIC KEY-----\nYOUR PUBLIC KEY HERE\n-----END PUBLIC KEY-----\n";
 
 int b64Index(char c) {
   if (c >= 'A' && c <= 'Z') return c - 'A';
@@ -129,29 +127,19 @@ bool verifySignature(const JsonDocument& doc) {
     return false;
   }
   const char* sigB64 = doc["proof"]["jws"] | "";
+  const char* pkB64 = doc["proof"]["verificationMethod"]["publicKeyBase64"] | "";
   DynamicJsonDocument tmp(doc);
   tmp.remove("proof");
   String canonical;
   canonicalize(tmp.as<JsonVariant>(), canonical);
 
-  uint8_t sig[64];
+  uint8_t sig[3300]; // size sufficient for Dilithium2
   size_t sigLen = decodeBase64Url(sigB64, sig);
-  if (sigLen != 64) return false;
+  uint8_t pub[1312];
+  size_t pubLen = decodeBase64(pkB64, strlen(pkB64), pub);
+  if (!sigLen || !pubLen) return false;
 
-  BIO* bio = BIO_new_mem_buf((void*)issuerPubKeyPem, -1);
-  EVP_PKEY* pkey = PEM_read_bio_PUBKEY(bio, NULL, NULL, NULL);
-  BIO_free(bio);
-  if (!pkey) return false;
-
-  EVP_MD_CTX* ctx = EVP_MD_CTX_new();
-  if (!ctx) { EVP_PKEY_free(pkey); return false; }
-  bool ok = EVP_DigestVerifyInit(ctx, NULL, NULL, NULL, pkey) == 1 &&
-            EVP_DigestVerify(ctx, sig, sigLen,
-                              (const uint8_t*)canonical.c_str(),
-                              canonical.length()) == 1;
-  EVP_MD_CTX_free(ctx);
-  EVP_PKEY_free(pkey);
-  return ok;
+  return dilithium_verify(sig, (const uint8_t*)canonical.c_str(), canonical.length(), pub) == 0;
 }
 #endif
 
